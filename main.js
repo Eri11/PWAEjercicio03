@@ -10,3 +10,8 @@ else {
     console.log('No se puede usar el Service Worker')
 }
 
+// Listen for all network requests
+window.addEventListener('fetch', event => {
+    console.log(`Request made: ${event.request.url}`);
+  });
+  

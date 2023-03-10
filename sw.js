@@ -120,29 +120,33 @@ var urlsToCache = [
     './img/ios/1024.png'
 ];
 
-self.addEventListener("install", (e) => {
-    e.waitUntil(
-        caches
-            .open(cache_NAME)
+// Event: install
+self.addEventListener('install', (event) => {
+    event.waitUntil(
+        caches.open(CACHE_NAME)
             .then((cache) => {
-                return cache.addAll(urlsToCache).then(() => {
-                    self.skipWaiting();
-                });
+                return cache.addAll(urlsToCache);
             })
-            .catch((err) => console.log("No se ha registrado el cache"), err)
+            .then(() => {
+                self.skipWaiting();
+            })
+            .catch((err) => {
+                console.log('Error registering cache', err);
+            })
     );
 });
 
-//Event activate
-self.addEventListener("activate", (e) => {
-    const cacheWhiteList = [cache_NAME];
-    e.waitUntil(
+// Event: activate
+self.addEventListener('activate', (event) => {
+    const cacheWhitelist = [CACHE_NAME];
+
+    event.waitUntil(
         caches.keys()
             .then((cacheNames) => {
                 return Promise.all(
-                    cacheNames.map((cacheNames) => {
-                        if (cacheWhiteList.indexOf(cacheName) == -1) {
-                            return cache.delete(cacheNames);
+                    cacheNames.map((cacheName) => {
+                        if (cacheWhitelist.indexOf(cacheName) === -1) {
+                            return caches.delete(cacheName);
                         }
                     })
                 );
@@ -153,16 +157,31 @@ self.addEventListener("activate", (e) => {
     );
 });
 
-
-//Event fetch
-self.addEventListener("fetch", (e) => {
-    e.respondWith(
-        caches.match(e.request)
-            .then(res => {
-                if (res) {
-                    return res;
+// Event: fetch
+self.addEventListener('fetch', (event) => {
+    event.respondWith(
+        caches.match(event.request)
+            .then((response) => {
+                if (response) {
+                    // Serve cached response
+                    return response;
                 }
-                return fetch(e.request);
+
+                // Fetch and cache new request
+                return fetch(event.request)
+                    .then((response) => {
+                        if (response && response.status === 200) {
+                            caches.open(CACHE_NAME)
+                                .then((cache) => {
+                                    cache.put(event.request, response.clone());
+                                });
+                        }
+
+                        return response;
+                    })
+                    .catch((err) => {
+                        console.log('Error fetching request', err);
+                    });
             })
     );
 });
